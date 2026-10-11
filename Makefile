@@ -1,7 +1,7 @@
 all:
 
-gcc -o main main.c
+	gcc -pthread -o main main.c
 
 clean:
 
-rm main
+	rm -f main
