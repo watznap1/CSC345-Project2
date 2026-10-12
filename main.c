@@ -1,3 +1,7 @@
+/*TO DO:
+    Implement output with identical format to instructions
+    Implement timer for testing*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -7,6 +11,7 @@ int puzzle[9][9]; //suduku puzzle gets read into this array
 typedef struct {
     int row;
     int column;
+    int index;
 } parameters;
 
 /*1 threads checking all rows and columns + 9 threads each checking a subgrid
@@ -60,18 +65,51 @@ void* validate_all_columns(void* param) {
 
 }
 
-
-
-
 //each thread checks only 1 row
 void* validate_single_row(void* param) {
+    parameters* designations = (parameters*) param; //pass row to check and index for thread to write to
+    
+    int row = designations->row;
+    int index = designations->index;
 
+    int marked[10] = {0};
 
+    for (int column = 0; column < 9; column++) {
+        int value = puzzle[row][column];
+
+         if (value < 1 || value > 9 || marked[value] == 1) {
+                valid2[index] = 0;
+                pthread_exit(NULL);
+            }
+
+        marked[value] = 1;
+    }
+
+    valid2[index] = 1;
     pthread_exit(NULL);
 }
 
 //each thread checks only 1 column
 void* validate_single_column(void* param) {
+    parameters* designations = (parameters*) param; //pass row to check and index for thread to write to
+    
+    int column = designations->column;
+    int index = designations->index;
+
+    int marked[10] = {0};
+
+    for (int row = 0; row < 9; row++) {
+        int value = puzzle[row][column];
+
+         if (value < 1 || value > 9 || marked[value] == 1) {
+                valid2[index] = 0;
+                pthread_exit(NULL);
+            }
+
+        marked[value] = 1;
+    }
+
+    valid2[index] = 1;
 
 
     pthread_exit(NULL);
@@ -81,6 +119,7 @@ void* validateSub(void* param) {
     parameters* data = (parameters*)param;
     int startRow = (data->row / 3) * 3;
     int startCol = (data->column / 3) * 3;
+    int index = data->index;
     int marked[10] = {0};
 
     for (int row = startRow; row < startRow + 3; row++) {
@@ -88,20 +127,35 @@ void* validateSub(void* param) {
             int value = puzzle[row][column];
 
             if (value < 1 || value > 9 || marked[value] == 1) {
-                valid1[2 + (startRow / 3) * 3 + (startCol / 3)] = 0;
+                if (index < 11) {
+                    valid1[index] = 0;
+                }
+                else {
+                    valid2[index] = 0;
+                }
                 pthread_exit(NULL);
             }
             marked[value] = 1;
         }
     }
     
-    valid1[2 + (startRow / 3) * 3 + (startCol / 3)] = 1;
+    if (index < 11) {
+        valid1[index] = 0;
+    }
+    else {
+        valid2[index] = 0;
+    }
     pthread_exit(NULL);
 }
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        printf("Usage: %s input.txt\n", argv[0]);
+        return 1;
+    }
+
+    /*get mode from user and validate input*/
+    int mode = atoi(argv[1]);
+    if (mode != 1 && mode != 2) {
         return 1;
     }
 
@@ -122,35 +176,81 @@ for (int row = 0; row < 9; row++){
 }
 fclose(file);
 
-pthread_t threads[11];
-parameters data[11];
+int valid = 1;
 
-for (int i = 0; i < 11; i++) {
-    if (i == 0) {
-        pthread_create(&threads[i], NULL, validate_all_rows, NULL);
-    } else if (i == 1){
-        pthread_create(&threads[i], NULL, validate_all_columns, NULL);
-    } else{
-        data[i].row = ((i - 2) / 3) * 3;
-        data[i].column = ((i - 2) % 3) * 3;
-        pthread_create(&threads[i], NULL, validateSub, &data[i]);
+if (mode == 1) {    /*mode 1 11 threads*/
+    pthread_t threads[11];
+    parameters data[11];
 
+    for (int i = 0; i < 11; i++) {
+        if (i == 0) {
+            pthread_create(&threads[i], NULL, validate_all_rows, NULL);
+        } else if (i == 1){
+            pthread_create(&threads[i], NULL, validate_all_columns, NULL);
+        } else{
+            data[i].row = ((i - 2) / 3) * 3;
+            data[i].column = ((i - 2) % 3) * 3;
+            pthread_create(&threads[i], NULL, validateSub, &data[i]);
+
+        }
+    }
+
+    for (int i = 0; i < 11; i++){
+        pthread_join(threads[i], NULL);
+    }
+
+    for (int i = 0; i < 11; i++) {
+        if (valid1[i] == 0) {
+            valid = 0;
+            break;
+        }
     }
 }
-for (int i = 0; i < 11; i++){
-    pthread_join(threads[i], NULL);
-}
-int valid =1;
-for (int i = 0; i < 11; i++) {
-    if (valid1[i] == 0) {
-        valid = 0;
+else {  /*Mode 2 27 threads*/
+    pthread_t threads[27];
+    parameters data[27];
+    int thread_count = 0;
+
+    for (int r = 0; r < 9; r++) {
+        data[thread_count].row = r;
+        data[thread_count].column = 0;
+        data[thread_count].index = thread_count;
+        pthread_create(&threads[thread_count], NULL, validate_single_row, &data[thread_count]);
+        thread_count++;
+    }
+
+     for (int c = 0; c < 9; c++) {
+        data[thread_count].row = 0;
+        data[thread_count].column = c;
+        data[thread_count].index = thread_count;
+        pthread_create(&threads[thread_count], NULL, validate_single_column, &data[thread_count]);
+        thread_count++;
+    }
+
+    for (int r = 0; r < 9; r += 3) {
+        for (int c = 0; c < 9; c += 3) {
+            data[thread_count].row = r;
+            data[thread_count].column = c;
+            data[thread_count].index = thread_count;
+            pthread_create(&threads[thread_count], NULL, validateSub, &data[thread_count]);
+            thread_count++;
+        }
+    }
+
+     for (int i = 0; i < 27; i++){
+        pthread_join(threads[i], NULL);
+    }
+
+    for (int i = 0; i < 27; i++) {
+        if (valid2[i] == 0) {
+            valid = 0;
+            break;
+        }
     }
 }
-if (valid) {
-    printf("sudoku solution is valid.\n");
-} else {
-    printf("sudoku solution is invalid.\n");
-}
+
+
+/*to do: print result in line with instructions*/
 
 return 0;
 }
