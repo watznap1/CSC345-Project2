@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <time.h>
 
-int puzzle[9][9]; //suduku puzzle gets read into this array
+int puzzle[9][9]; /*sudoku puzzle gets read into this array*/
 
 typedef struct {
     int row;
@@ -16,10 +16,10 @@ row checker writes to val[0], colunm to val[1] and subgrid to rest
 if array is all 1, puzzle is valid, if any zeroes then a validate function has failed to validate and puzzle is invalid*/
 int valid1[11] = {0};
 
-//for 27 thread implementation (option 2)
+/*for 27 thread implementation (option 2)*/
 int valid2[27] = {0};
 
-//1 thread checks all rows
+/*1 thread checks all rows*/
 void* validate_all_rows(void* param) {
     for (int row = 0; row < 9; row ++) {
         int marked[10] = {0};    /*/rray marking seen values*/
@@ -62,9 +62,9 @@ void* validate_all_columns(void* param) {
 
 }
 
-//each thread checks only 1 row
+/*each thread checks only 1 row*/
 void* validate_single_row(void* param) {
-    parameters* designations = (parameters*) param; //pass row to check and index for thread to write to
+    parameters* designations = (parameters*) param; /*pass row to check and index for thread to write to*/
     
     int row = designations->row;
     int index = designations->index;
@@ -83,12 +83,13 @@ void* validate_single_row(void* param) {
     }
 
     valid2[index] = 1;
+
     pthread_exit(NULL);
 }
 
-//each thread checks only 1 column
+/*each thread checks only 1 column*/
 void* validate_single_column(void* param) {
-    parameters* designations = (parameters*) param; //pass row to check and index for thread to write to
+    parameters* designations = (parameters*) param; /*pass row to check and index for thread to write to*/
     
     int column = designations->column;
     int index = designations->index;
