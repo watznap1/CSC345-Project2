@@ -113,7 +113,20 @@ void* validate_single_column(void* param) {
     pthread_exit(NULL);
 }
 
+/*part 4 keeps thread busy. Uncomment this func and the call at the top of validateSub if you want to observe CPU use.
+void busy_workDeluxe()
+{
+    for (volatile long i = 0; i < 10000000000; i++)
+    {
+
+    }
+}
+
+*/
+
+
 void* validateSub(void* param) {
+    //busy_workDeluxe();
     parameters* data = (parameters*)param;
     int startRow = (data->row / 3) * 3;
     int startCol = (data->column / 3) * 3;
