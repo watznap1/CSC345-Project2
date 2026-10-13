@@ -1,10 +1,7 @@
-/*TO DO:
-    Implement output with identical format to instructions
-    Implement timer for testing*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 
 int puzzle[9][9]; //suduku puzzle gets read into this array
 
@@ -140,10 +137,10 @@ void* validateSub(void* param) {
     }
     
     if (index < 11) {
-        valid1[index] = 0;
+        valid1[index] = 1;
     }
     else {
-        valid2[index] = 0;
+        valid2[index] = 1;
     }
     pthread_exit(NULL);
 }
@@ -159,7 +156,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-FILE *file = fopen(argv[1], "r");
+FILE *file = fopen("input.txt", "r");
 if (file == NULL) {
     perror("Error opening input file");
     return 1;
@@ -176,7 +173,19 @@ for (int row = 0; row < 9; row++){
 }
 fclose(file);
 
+printf("BOARD STATE IN input.txt:\n");
+for (int r = 0; r < 9; r++) {
+    for (int c = 0; c < 9; c++) {
+        printf("%d%s", puzzle[r][c], (c == 8) ? "" : " ");
+    }
+    printf("\n");
+}
+
+struct timespec start, end;
+
 int valid = 1;
+
+clock_gettime(CLOCK_MONOTONIC, &start);
 
 if (mode == 1) {    /*mode 1 11 threads*/
     pthread_t threads[11];
@@ -190,6 +199,7 @@ if (mode == 1) {    /*mode 1 11 threads*/
         } else{
             data[i].row = ((i - 2) / 3) * 3;
             data[i].column = ((i - 2) % 3) * 3;
+            data[i].index = i;
             pthread_create(&threads[i], NULL, validateSub, &data[i]);
 
         }
@@ -249,8 +259,15 @@ else {  /*Mode 2 27 threads*/
     }
 }
 
+clock_gettime(CLOCK_MONOTONIC, &end);
 
-/*to do: print result in line with instructions*/
+double elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+
+if (valid) {
+    printf("SOLUTION: YES (%.6f seconds)\n", elapsed_time);
+} else {
+    printf("SOLUTION: NO (%.6f seconds)\n", elapsed_time);
+}
 
 return 0;
 }
